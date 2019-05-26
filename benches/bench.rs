@@ -2,8 +2,8 @@
 
 extern crate test;
 
-use test::{Bencher, black_box};
 use bimap::BiHashMap;
+use test::{black_box, Bencher};
 
 #[bench]
 fn bench_hash_map_insert(b: &mut Bencher) {

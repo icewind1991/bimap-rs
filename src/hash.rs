@@ -1,21 +1,21 @@
 //! A bimap backed by two `HashMap`s.
 
 use crate::Overwritten;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{BuildHasher, Hasher};
+use std::mem::replace;
 use std::{
     collections::{hash_map, HashMap},
     fmt,
     hash::Hash,
     iter::{FromIterator, FusedIterator},
 };
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hasher, BuildHasher};
-use std::mem::replace;
 
 /// A dummy hasher that maps simply returns the hashed u64
 ///
 /// trying to hash anything but a u64 will result in a panic
 struct NullHasher {
-    data: u64
+    data: u64,
 }
 
 impl Hasher for NullHasher {
@@ -46,7 +46,7 @@ impl BuildHasher for NullHasherBuilder {
 }
 
 /// A bimap backed by two `HashMap`s.
-/// 
+///
 /// See the [module-level documentation] for more details and examples.
 ///
 /// [module-level documentation]: crate
@@ -57,9 +57,9 @@ pub struct BiHashMap<L, R> {
 }
 
 impl<L, R> BiHashMap<L, R>
-    where
-        L: Eq + Hash,
-        R: Eq + Hash,
+where
+    L: Eq + Hash,
+    R: Eq + Hash,
 {
     /// Creates an empty `BiHashMap`.
     ///
@@ -212,9 +212,7 @@ impl<L, R> BiHashMap<L, R>
     /// }
     /// ```
     pub fn left_values(&self) -> LeftValues<'_, L, R> {
-        LeftValues {
-            inner: self.iter(),
-        }
+        LeftValues { inner: self.iter() }
     }
 
     /// Creates an iterator over the right values in the bimap in arbitrary order.
@@ -236,18 +234,18 @@ impl<L, R> BiHashMap<L, R>
     /// }
     /// ```
     pub fn right_values(&self) -> RightValues<'_, L, R> {
-        RightValues {
-            inner: self.iter(),
-        }
+        RightValues { inner: self.iter() }
     }
 
     fn get_pair_by_left(&self, left: &L) -> Option<&(L, R)> {
-        self.left.get(&Self::get_hash(left))
+        self.left
+            .get(&Self::get_hash(left))
             .and_then(|key| self.data[*key].as_ref())
     }
 
     fn get_pair_by_right(&self, right: &R) -> Option<&(L, R)> {
-        self.right.get(&Self::get_hash(right))
+        self.right
+            .get(&Self::get_hash(right))
             .and_then(|key| self.data[*key].as_ref())
     }
 
@@ -270,8 +268,7 @@ impl<L, R> BiHashMap<L, R>
     /// assert_eq!(bimap.get_by_left(&'z'), None);
     /// ```
     pub fn get_by_left(&self, left: &L) -> Option<&R> {
-        self.get_pair_by_left(left)
-            .map(|(_, r)| r)
+        self.get_pair_by_left(left).map(|(_, r)| r)
     }
 
     /// Returns a reference to the left value corresponding to the given right value.
@@ -287,8 +284,7 @@ impl<L, R> BiHashMap<L, R>
     /// assert_eq!(bimap.get_by_right(&2), None);
     /// ```
     pub fn get_by_right(&self, right: &R) -> Option<&L> {
-        self.get_pair_by_right(right)
-            .map(|(l, _)| l)
+        self.get_pair_by_right(right).map(|(l, _)| l)
     }
 
     /// Returns `true` if the bimap contains the given left value and `false` otherwise.
@@ -304,8 +300,7 @@ impl<L, R> BiHashMap<L, R>
     /// assert!(!bimap.contains_left(&'b'));
     /// ```
     pub fn contains_left(&self, left: &L) -> bool {
-        self.get_pair_by_left(left)
-            .is_some()
+        self.get_pair_by_left(left).is_some()
     }
 
     /// Returns `true` if the map contains the given right value and `false` otherwise.
@@ -321,8 +316,7 @@ impl<L, R> BiHashMap<L, R>
     /// assert!(!bimap.contains_right(&2));
     /// ```
     pub fn contains_right(&self, right: &R) -> bool {
-        self.get_pair_by_right(right)
-            .is_some()
+        self.get_pair_by_right(right).is_some()
     }
 
     /// Removes the left-right pair corresponding to the given left value.
@@ -473,13 +467,12 @@ impl<L, R> BiHashMap<L, R>
         }
     }
 
-
     /// Retains only the elements specified by the predicate.
     ///
     /// In other words, remove all left-right pairs `(l, r)` such that `f(&l, &r)` returns `false`.
     ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use bimap::BiHashMap;
     ///
@@ -494,8 +487,8 @@ impl<L, R> BiHashMap<L, R>
     /// assert_eq!(bimap.get_by_left(&'a'), None);
     /// ```
     pub fn retain<F>(&mut self, f: F)
-        where
-            F: FnMut(&L, &R) -> bool,
+    where
+        F: FnMut(&L, &R) -> bool,
     {
         let mut f = f;
         let right = &mut self.right;
@@ -523,9 +516,9 @@ impl<L, R> BiHashMap<L, R>
 }
 
 impl<L, R> Clone for BiHashMap<L, R>
-    where
-        L: Clone + Eq + Hash,
-        R: Clone + Eq + Hash,
+where
+    L: Clone + Eq + Hash,
+    R: Clone + Eq + Hash,
 {
     fn clone(&self) -> BiHashMap<L, R> {
         self.iter().map(|(l, r)| (l.clone(), r.clone())).collect()
@@ -533,9 +526,9 @@ impl<L, R> Clone for BiHashMap<L, R>
 }
 
 impl<L, R> fmt::Debug for BiHashMap<L, R>
-    where
-        L: fmt::Debug + Eq + Hash,
-        R: fmt::Debug + Eq + Hash,
+where
+    L: fmt::Debug + Eq + Hash,
+    R: fmt::Debug + Eq + Hash,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{{")?;
@@ -549,9 +542,9 @@ impl<L, R> fmt::Debug for BiHashMap<L, R>
 }
 
 impl<L, R> Default for BiHashMap<L, R>
-    where
-        L: Eq + Hash,
-        R: Eq + Hash,
+where
+    L: Eq + Hash,
+    R: Eq + Hash,
 {
     fn default() -> BiHashMap<L, R> {
         BiHashMap::new()
@@ -559,19 +552,20 @@ impl<L, R> Default for BiHashMap<L, R>
 }
 
 impl<L, R> Eq for BiHashMap<L, R>
-    where
-        L: Eq + Hash,
-        R: Eq + Hash,
-{}
+where
+    L: Eq + Hash,
+    R: Eq + Hash,
+{
+}
 
 impl<L, R> FromIterator<(L, R)> for BiHashMap<L, R>
-    where
-        L: Eq + Hash,
-        R: Eq + Hash,
+where
+    L: Eq + Hash,
+    R: Eq + Hash,
 {
     fn from_iter<I>(iter: I) -> BiHashMap<L, R>
-        where
-            I: IntoIterator<Item=(L, R)>,
+    where
+        I: IntoIterator<Item = (L, R)>,
     {
         let iter = iter.into_iter();
         let mut bimap = match iter.size_hint() {
@@ -586,9 +580,9 @@ impl<L, R> FromIterator<(L, R)> for BiHashMap<L, R>
 }
 
 impl<'a, L, R> IntoIterator for &'a BiHashMap<L, R>
-    where
-        L: Eq + Hash,
-        R: Eq + Hash,
+where
+    L: Eq + Hash,
+    R: Eq + Hash,
 {
     type Item = (&'a L, &'a R);
     type IntoIter = Iter<'a, L, R>;
@@ -599,9 +593,9 @@ impl<'a, L, R> IntoIterator for &'a BiHashMap<L, R>
 }
 
 impl<L, R> IntoIterator for BiHashMap<L, R>
-    where
-        L: Eq + Hash,
-        R: Eq + Hash,
+where
+    L: Eq + Hash,
+    R: Eq + Hash,
 {
     type Item = (L, R);
     type IntoIter = IntoIter<L, R>;
@@ -615,12 +609,15 @@ impl<L, R> IntoIterator for BiHashMap<L, R>
 }
 
 impl<L, R> PartialEq for BiHashMap<L, R>
-    where
-        L: Eq + Hash,
-        R: Eq + Hash,
+where
+    L: Eq + Hash,
+    R: Eq + Hash,
 {
     fn eq(&self, other: &Self) -> bool {
-        self.left.len() == other.left.len() && self.iter().all(|(left, right)| other.get_by_left(left).map_or(false, |r| *right == *r))
+        self.left.len() == other.left.len()
+            && self
+                .iter()
+                .all(|(left, right)| other.get_by_left(left).map_or(false, |r| *right == *r))
     }
 }
 
@@ -642,7 +639,7 @@ impl<L, R> Iterator for IntoIter<L, R> {
             match self.inner.next() {
                 Some(Some((l, r))) => return Some((l, r)),
                 Some(None) => {}
-                None => return None
+                None => return None,
             }
         }
     }
@@ -674,7 +671,7 @@ impl<'a, L, R> Iterator for Iter<'a, L, R> {
             match self.inner.next() {
                 Some(Some((l, r))) => return Some((l, r)),
                 Some(None) => {}
-                None => return None
+                None => return None,
             }
         }
     }
@@ -736,9 +733,19 @@ impl<'a, L, R> Iterator for RightValues<'a, L, R> {
 
 // safe because internal Rcs are not exposed by the api and the reference counts only change in
 // methods with &mut self
-unsafe impl<L, R> Send for BiHashMap<L, R> where L: Send, R: Send {}
+unsafe impl<L, R> Send for BiHashMap<L, R>
+where
+    L: Send,
+    R: Send,
+{
+}
 
-unsafe impl<L, R> Sync for BiHashMap<L, R> where L: Sync, R: Sync {}
+unsafe impl<L, R> Sync for BiHashMap<L, R>
+where
+    L: Sync,
+    R: Sync,
+{
+}
 
 #[cfg(test)]
 mod tests {
