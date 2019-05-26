@@ -8,8 +8,42 @@ use std::{
     iter::{FromIterator, FusedIterator},
 };
 use std::collections::hash_map::DefaultHasher;
-use std::hash::Hasher;
+use std::hash::{Hasher, BuildHasher};
 use std::mem::replace;
+
+/// A dummy hasher that maps simply returns the hashed u64
+///
+/// trying to hash anything but a u64 will result in a panic
+struct NullHasher {
+    data: u64
+}
+
+impl Hasher for NullHasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.data
+    }
+
+    #[inline]
+    fn write(&mut self, _msg: &[u8]) {
+        panic!("can only hash u64");
+    }
+
+    #[inline]
+    fn write_u64(&mut self, data: u64) {
+        self.data = data;
+    }
+}
+
+struct NullHasherBuilder;
+
+impl BuildHasher for NullHasherBuilder {
+    type Hasher = NullHasher;
+
+    fn build_hasher(&self) -> Self::Hasher {
+        NullHasher { data: 0 }
+    }
+}
 
 /// A bimap backed by two `HashMap`s.
 /// 
@@ -17,8 +51,8 @@ use std::mem::replace;
 ///
 /// [module-level documentation]: crate
 pub struct BiHashMap<L, R> {
-    left: HashMap<u64, usize>,
-    right: HashMap<u64, usize>,
+    left: HashMap<u64, usize, NullHasherBuilder>,
+    right: HashMap<u64, usize, NullHasherBuilder>,
     data: Vec<Option<(L, R)>>,
 }
 
@@ -38,8 +72,8 @@ impl<L, R> BiHashMap<L, R>
     /// ```
     pub fn new() -> Self {
         Self {
-            left: HashMap::new(),
-            right: HashMap::new(),
+            left: HashMap::with_hasher(NullHasherBuilder),
+            right: HashMap::with_hasher(NullHasherBuilder),
             data: Vec::new(),
         }
     }
@@ -56,8 +90,8 @@ impl<L, R> BiHashMap<L, R>
     /// ```
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            left: HashMap::with_capacity(capacity),
-            right: HashMap::with_capacity(capacity),
+            left: HashMap::with_capacity_and_hasher(capacity, NullHasherBuilder),
+            right: HashMap::with_capacity_and_hasher(capacity, NullHasherBuilder),
             data: Vec::with_capacity(capacity),
         }
     }
