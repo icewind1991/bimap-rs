@@ -752,6 +752,20 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_hasher() {
+        let mut hasher = NullHasher { data: 0 };
+        hasher.write_u64(12);
+        assert_eq!(12, hasher.finish());
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_hasher_non_u64() {
+        let mut hasher = NullHasher { data: 0 };
+        hasher.write_u32(12);
+    }
+
+    #[test]
     fn clone() {
         let mut bimap = BiHashMap::new();
         bimap.insert('a', 1);
